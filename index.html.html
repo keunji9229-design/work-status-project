@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>회원 및 레포트 관리 시스템</title>
+    <!-- Tailwind CSS CDN 로드 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Inter 폰트 사용 */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f7f9fb; /* 라이트한 배경 */
+        }
+        /* 스크롤바 숨기기 (깔끔한 UI를 위해) */
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;  /* IE and Edge */
+            scrollbar-width: none;  /* Firefox */
+        }
+    </style>
+</head>
+<body>
+
+<div id="app" class="flex h-screen overflow-hidden">
+    <!-- 사이드바 (로고 및 네비게이션) -->
+    <aside class="w-64 bg-white shadow-xl flex flex-col p-4 border-r border-gray-200">
+        
+        <!-- 로고 영역 -->
+        <div class="p-4 mb-6 border-b border-gray-200">
+            <div class="flex items-center space-x-2">
+                <!-- 휴펫네이쳐코리아 로고 이미지로 대체 -->
+                <img src="휴펫네이쳐코리아 로고.png" alt="휴펫네이쳐코리아 로고" class="h-10 w-10 object-contain">
+                <h1 class="text-xl font-extrabold text-gray-800 tracking-tight">휴펫 관리</h1>
+            </div>
+            <p class="text-xs text-gray-500 mt-2">v1.0. 사용자 ID: <span id="user-id" class="font-mono text-xs text-indigo-600">Loading...</span></p>
+            <p class="text-[10px] text-red-500 mt-2">공유 모드 활성화됨 (Public Data Path)</p>
+        </div>
+
+        <!-- 네비게이션 탭 -->
+        <nav class="flex flex-col space-y-2">
+            <button data-tab="register" class="tab-button w-full text-left px-4 py-3 rounded-lg text-sm font-medium transition-colors duration-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100">
+                👤 회원 등록
+            </button>
+            <button data-tab="report-form" class="tab-button w-full text-left px-4 py-3 rounded-lg text-sm font-medium transition-colors duration-200 text-gray-700 hover:bg-gray-100">
+                📝 레포트 작성
+            </button>
+            <button data-tab="my-reports" class="tab-button w-full text-left px-4 py-3 rounded-lg text-sm font-medium transition-colors duration-200 text-gray-700 hover:bg-gray-100">
+                📂 나의 레포트 (전체 공유)
+            </button>
+        </nav>
+
+        <div id="status-message" class="mt-auto p-4 text-xs text-center text-red-500 hidden"></div>
+    </aside>
+
+    <!-- 메인 컨텐츠 영역 -->
+    <main class="flex-1 p-8 overflow-y-auto hide-scrollbar">
+        <h2 id="main-title" class="text-3xl font-bold text-gray-900 mb-8">회원 등록</h2>
+
+        <!-- 탭 컨텐츠 -->
+        <div id="tab-content">
+            <!-- 회원 등록 폼 -->
+            <div id="register-tab" class="tab-pane">
+                <form id="member-registration-form" class="bg-white p-6 rounded-xl shadow-lg max-w-lg">
+                    <div class="space-y-4">
+                        <label class="block">
+                            <span class="text-gray-700 font-medium">이름 (Name)</span>
+                            <input type="text" id="member-name" required placeholder="홍길동" class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 p-2 border">
+                        </label>
+                        <label class="block">
+                            <span class="text-gray-700 font-medium">직함 (Title)</span>
+                            <input type="text" id="member-title" required placeholder="팀장" class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 p-2 border">
+                        </label>
+                        <label class="block">
+                            <span class="text-gray-700 font-medium">연락처 (Contact)</span>
+                            <input type="tel" id="member-contact" required placeholder="010-1234-5678" class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 p-2 border">
+                        </label>
+                        <label class="block">
+                            <span class="text-gray-700 font-medium">이메일 (Email)</span>
+                            <input type="email" id="member-email" required placeholder="user@huppet.co.kr" class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 p-2 border">
+                        </label>
+                    </div>
+                    <button type="submit" class="mt-6 w-full px-4 py-2 bg-indigo-600 text-white font-semibold rounded-lg shadow-md hover:bg-indigo-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
+                        회원 등록
+                    </button>
+                </form>
+            </div>
+
+            <!-- 레포트 작성 폼 -->
+            <div id="report-form-tab" class="tab-pane hidden">
+                <div class="bg-white p-6 rounded-xl shadow-lg">
+                    <h3 class="text-xl font-semibold mb-4 text-gray-800">1. 레포트 작성자 선택 (공유 회원 목록)</h3>
+                    <div id="member-select-list" class="flex flex-wrap gap-3 p-4 border rounded-lg bg-gray-50 min-h-[5rem]">
+                        <!-- 회원 이름 탭/버튼이 여기에 동적으로 로드됩니다. -->
+                        <p id="member-select-placeholder" class="text-gray-500">등록된 회원이 없습니다. '회원 등록' 탭에서 먼저 등록해주세요.</p>
+                    </div>
+
+                    <form id="report-submission-form" class="mt-8 pt-4 border-t" style="pointer-events: none; opacity: 0.5;">
+                        <input type="hidden" id="selected-member-id">
+                        <p class="mb-4 text-lg font-semibold text-gray-700">2. 레포트 내용 작성 (선택된 회원: <span id="selected-member-name" class="text-indigo-600 font-bold">없음</span>)</p>
+
+                        <label class="block mb-4">
+                            <span class="text-gray-700 font-medium">레포트 제목</span>
+                            <input type="text" id="report-title" required placeholder="2024년 4분기 실적 레포트" class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 p-2 border">
+                        </label>
+
+                        <label class="block">
+                            <span class="text-gray-700 font-medium">레포트 내용</span>
+                            <textarea id="report-content" required rows="8" placeholder="주요 성과 및 다음 분기 계획을 상세히 작성하세요." class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 p-2 border"></textarea>
+                        </label>
+                        
+                        <button type="submit" class="mt-6 w-full px-4 py-2 bg-indigo-600 text-white font-semibold rounded-lg shadow-md hover:bg-indigo-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
+                            레포트 저장
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- 나의 레포트 목록 -->
+            <div id="my-reports-tab" class="tab-pane hidden">
+                <div id="reports-list" class="space-y-4">
+                    <!-- 레포트 목록이 여기에 동적으로 로드됩니다. -->
+                    <p id="reports-placeholder" class="text-gray-500 p-4 border rounded-lg bg-white shadow-sm">아직 작성된 레포트가 없습니다.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 커스텀 모달 (에러 및 성공 메시지) -->
+        <div id="custom-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden items-center justify-center z-50">
+            <div class="bg-white p-6 rounded-lg shadow-2xl w-full max-w-sm">
+                <h3 id="modal-title" class="text-xl font-bold mb-3 text-gray-800">알림</h3>
+                <p id="modal-message" class="text-gray-600 mb-4"></p>
+                <button id="modal-close-button" class="w-full px-4 py-2 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition-colors">확인</button>
+            </div>
+        </div>
+    </main>
+</div>
+
+<!-- Firebase 및 앱 로직 스크립트 -->
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, doc, addDoc, onSnapshot, collection, query, serverTimestamp, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    // Firestore 로그 레벨 설정 (디버깅용)
+    setLogLevel('Debug');
+
+    // 전역 변수 초기화
+    let db, auth, userId = null;
+    let members = [];
+    let reports = [];
+    let activeTab = 'register';
+    let selectedMemberId = null;
+
+    // Canvas 환경 변수 로드
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+    const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+    const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+    // DOM 요소 캐싱
+    const tabContent = document.getElementById('tab-content');
+    const tabButtons = document.querySelectorAll('.tab-button');
+    const mainTitle = document.getElementById('main-title');
+    const userIdDisplay = document.getElementById('user-id');
+    const memberRegistrationForm = document.getElementById('member-registration-form');
+    const memberSelectList = document.getElementById('member-select-list');
+    const memberSelectPlaceholder = document.getElementById('member-select-placeholder');
+    const reportSubmissionForm = document.getElementById('report-submission-form');
+    const reportsList = document.getElementById('reports-list');
+    const reportsPlaceholder = document.getElementById('reports-placeholder');
+    const selectedMemberNameDisplay = document.getElementById('selected-member-name');
+    const modal = document.getElementById('custom-modal');
+    const modalTitle = document.getElementById('modal-title');
+    const modalMessage = document.getElementById('modal-message');
+    const modalCloseButton = document.getElementById('modal-close-button');
+
+
+    // ======= Firebase 초기화 및 인증 =======
+    async function initializeFirebase() {
+        if (!firebaseConfig) {
+            showError("Firebase 설정 정보를 찾을 수 없습니다. 앱이 데이터를 저장할 수 없습니다.");
+            return;
+        }
+        
+        try {
+            const app = initializeApp(firebaseConfig);
+            auth = getAuth(app);
+            db = getFirestore(app);
+
+            // 인증 상태 변화 리스너 설정
+            onAuthStateChanged(auth, (user) => {
+                if (user) {
+                    userId = user.uid;
+                    userIdDisplay.textContent = userId;
+                    // 인증이 완료되면 데이터 리스너 시작
+                    setupFirestoreListeners();
+                    console.log("인증 완료. User ID:", userId);
+                } else {
+                    console.log("사용자가 로그아웃되었거나 인증되지 않았습니다.");
+                    // 익명 로그인 시도 (또는 커스텀 토큰 로그인)
+                    handleAuth(auth);
+                }
+            });
+
+            // 초기 인증 시도
+            if (!auth.currentUser) {
+                await handleAuth(auth);
+            }
+
+        } catch (error) {
+            console.error("Firebase 초기화 중 오류 발생:", error);
+            showError("시스템 초기화 오류: " + error.message);
+        }
+    }
+
+    async function handleAuth(authInstance) {
+        try {
+            if (initialAuthToken) {
+                await signInWithCustomToken(authInstance, initialAuthToken);
+                console.log("Custom token으로 로그인 성공.");
+            } else {
+                await signInAnonymously(authInstance);
+                console.log("익명 로그인 성공.");
+            }
+        } catch (error) {
+            console.error("Firebase 인증 중 오류 발생:", error);
+            showError("인증 오류: " + error.message);
+        }
+    }
+
+    // ======= Firestore 데이터 경로 및 리스너 설정 =======
+
+    // 직원 공유를 위해 Public Data Path 사용
+    function getPublicCollectionPath(collectionName) {
+        // 모든 사용자가 데이터를 공유할 수 있는 공용 경로
+        return `/artifacts/${appId}/public/data/${collectionName}`;
+    }
+
+    function setupFirestoreListeners() {
+        if (!db || !userId) return;
+
+        // 1. 회원 목록 실시간 리스너 (공유)
+        const membersRef = collection(db, getPublicCollectionPath('members'));
+        onSnapshot(membersRef, (snapshot) => {
+            members = [];
+            snapshot.forEach(doc => {
+                members.push({ id: doc.id, ...doc.data() });
+            });
+            console.log("회원 목록 업데이트 (공유):", members.length, "명");
+            renderMemberSelectList();
+            // 현재 선택된 회원이 목록에 남아있는지 확인
+            if (selectedMemberId && !members.find(m => m.id === selectedMemberId)) {
+                selectedMemberId = null;
+                updateReportFormState();
+            }
+        }, (error) => {
+            console.error("회원 목록 로드 중 오류 발생:", error);
+            showError("회원 목록 로드 오류.");
+        });
+
+        // 2. 레포트 목록 실시간 리스너 (공유)
+        const reportsRef = collection(db, getPublicCollectionPath('reports'));
+        onSnapshot(reportsRef, (snapshot) => {
+            reports = [];
+            snapshot.forEach(doc => {
+                reports.push({ id: doc.id, ...doc.data() });
+            });
+            // 최신 레포트가 위에 오도록 시간순으로 정렬
+            reports.sort((a, b) => {
+                // createdAt 필드가 없을 경우를 대비한 안전 장치
+                const dateA = a.createdAt ? a.createdAt.toDate().getTime() : 0;
+                const dateB = b.createdAt ? b.createdAt.toDate().getTime() : 0;
+                return dateB - dateA;
+            });
+            console.log("레포트 목록 업데이트 (공유):", reports.length, "개");
+            renderReportsList();
+        }, (error) => {
+            console.error("레포트 목록 로드 중 오류 발생:", error);
+            showError("레포트 목록 로드 오류.");
+        });
+    }
+
+
+    // ======= UI 및 탭 관리 함수 (나머지 코드는 변경 없음) =======
+
+    function switchTab(tabId) {
+        activeTab = tabId;
+        
+        // 버튼 스타일 업데이트
+        tabButtons.forEach(btn => {
+            const isSelected = btn.dataset.tab === tabId;
+            btn.classList.toggle('bg-indigo-50', isSelected);
+            btn.classList.toggle('text-indigo-700', isSelected);
+            btn.classList.toggle('hover:bg-indigo-100', isSelected);
+            btn.classList.toggle('text-gray-700', !isSelected);
+            btn.classList.toggle('hover:bg-gray-100', !isSelected);
+        });
+
+        // 컨텐츠 패널 전환
+        tabContent.querySelectorAll('.tab-pane').forEach(pane => {
+            pane.classList.add('hidden');
+        });
+        document.getElementById(`${tabId}-tab`).classList.remove('hidden');
+
+        // 메인 타이틀 업데이트
+        const titles = {
+            'register': '회원 등록',
+            'report-form': '레포트 작성',
+            'my-reports': '나의 레포트 (전체 공유)'
+        };
+        mainTitle.textContent = titles[tabId] || '시스템 관리';
+
+        // 레포트 폼 상태 업데이트 (레포트 폼 탭일 때만)
+        if (tabId === 'report-form') {
+            updateReportFormState();
+        }
+    }
+
+    // 회원 선택 버튼 (탭처럼) 렌더링
+    function renderMemberSelectList() {
+        memberSelectList.innerHTML = ''; // 기존 목록 초기화
+        memberSelectPlaceholder.classList.add('hidden');
+
+        if (members.length === 0) {
+            memberSelectPlaceholder.classList.remove('hidden');
+            selectedMemberId = null;
+            updateReportFormState();
+            return;
+        }
+
+        members.forEach(member => {
+            const isSelected = member.id === selectedMemberId;
+            const button = document.createElement('button');
+            button.textContent = member.name;
+            button.dataset.memberId = member.id;
+            button.className = `px-4 py-2 rounded-full text-sm font-semibold transition-all duration-200 shadow-sm
+                                ${isSelected 
+                                    ? 'bg-indigo-600 text-white shadow-indigo-300' 
+                                    : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-300'}`;
+            
+            button.addEventListener('click', () => {
+                selectedMemberId = member.id;
+                renderMemberSelectList(); // UI 업데이트
+                updateReportFormState(); // 폼 상태 업데이트
+            });
+            memberSelectList.appendChild(button);
+        });
+
+        updateReportFormState();
+    }
+
+    // 레포트 폼의 상태 (작성 가능 여부 및 선택된 이름) 업데이트
+    function updateReportFormState() {
+        const selectedMember = members.find(m => m.id === selectedMemberId);
+
+        if (selectedMember) {
+            selectedMemberNameDisplay.textContent = selectedMember.name;
+            reportSubmissionForm.style.pointerEvents = 'auto';
+            reportSubmissionForm.style.opacity = '1';
+        } else {
+            selectedMemberNameDisplay.textContent = '없음';
+            reportSubmissionForm.style.pointerEvents = 'none';
+            reportSubmissionForm.style.opacity = '0.5';
+        }
+    }
+
+    // 나의 레포트 목록 렌더링
+    function renderReportsList() {
+        reportsList.innerHTML = '';
+        reportsPlaceholder.classList.add('hidden');
+
+        if (reports.length === 0) {
+            reportsPlaceholder.classList.remove('hidden');
+            reportsList.appendChild(reportsPlaceholder);
+            return;
+        }
+
+        reports.forEach(report => {
+            const member = members.find(m => m.id === report.memberId);
+            const memberName = member ? member.name : '알 수 없는 회원';
+            const timestamp = report.createdAt ? report.createdAt.toDate().toLocaleString('ko-KR') : '날짜 정보 없음';
+
+            const reportCard = document.createElement('div');
+            reportCard.className = 'bg-white p-5 rounded-lg shadow-md border border-gray-100 hover:shadow-lg transition-shadow duration-200';
+            reportCard.innerHTML = `
+                <div class="flex justify-between items-start mb-2">
+                    <span class="text-xs font-mono px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full">${memberName}</span>
+                    <span class="text-xs text-gray-500">${timestamp}</span>
+                </div>
+                <h4 class="text-xl font-bold text-gray-800 mb-1">${report.title}</h4>
+                <p class="text-sm text-gray-600 truncate">${report.content.split('\n')[0]}</p>
+                <button data-report-id="${report.id}" class="view-report-btn mt-3 text-sm text-indigo-600 hover:text-indigo-800 font-medium">자세히 보기</button>
+            `;
+            reportsList.appendChild(reportCard);
+        });
+
+        // '자세히 보기' 버튼 이벤트 리스너 추가
+        reportsList.querySelectorAll('.view-report-btn').forEach(button => {
+            button.addEventListener('click', (e) => {
+                const reportId = e.target.dataset.reportId;
+                const report = reports.find(r => r.id === reportId);
+                if (report) {
+                    const member = members.find(m => m.id === report.memberId);
+                    const memberName = member ? member.name : '알 수 없는 회원';
+                    showModal(
+                        `레포트 상세: ${report.title}`, 
+                        `작성자: ${memberName} (ID: ${report.memberId})\n\n제목: ${report.title}\n\n내용:\n${report.content}`
+                    );
+                }
+            });
+        });
+    }
+
+
+    // ======= 이벤트 핸들러 및 비즈니스 로직 =======
+
+    // 회원 등록 처리
+    memberRegistrationForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const memberData = {
+            name: document.getElementById('member-name').value.trim(),
+            title: document.getElementById('member-title').value.trim(),
+            contact: document.getElementById('member-contact').value.trim(),
+            email: document.getElementById('member-email').value.trim(),
+            createdAt: serverTimestamp()
+        };
+
+        if (!db || !userId) {
+            showError("데이터베이스 연결 준비 중입니다. 잠시 후 다시 시도해주세요.");
+            return;
+        }
+
+        try {
+            // Public Collection 사용
+            const membersRef = collection(db, getPublicCollectionPath('members'));
+            await addDoc(membersRef, memberData);
+            memberRegistrationForm.reset();
+            showModal("성공", `회원 '${memberData.name}' 님의 등록이 완료되었습니다. (직원들과 공유됩니다)`);
+            // 레포트 작성 탭으로 자동 이동
+            switchTab('report-form'); 
+        } catch (error) {
+            console.error("회원 등록 실패:", error);
+            showError("회원 등록 중 오류가 발생했습니다: " + error.message);
+        }
+    });
+
+    // 레포트 저장 처리
+    reportSubmissionForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        if (!selectedMemberId) {
+            showModal("경고", "레포트를 작성할 회원을 먼저 선택해주세요.");
+            return;
+        }
+
+        const reportData = {
+            memberId: selectedMemberId, // 레포트 작성자 ID (회원 ID)
+            authorId: userId, // 레포트를 실제로 저장한 직원(현재 사용자) ID
+            title: document.getElementById('report-title').value.trim(),
+            content: document.getElementById('report-content').value.trim(),
+            createdAt: serverTimestamp()
+        };
+
+        if (!db || !userId) {
+            showError("데이터베이스 연결 준비 중입니다. 잠시 후 다시 시도해주세요.");
+            return;
+        }
+
+        try {
+            // Public Collection 사용
+            const reportsRef = collection(db, getPublicCollectionPath('reports'));
+            await addDoc(reportsRef, reportData);
+            reportSubmissionForm.reset();
+            // 선택된 회원 이름은 유지
+            document.getElementById('report-title').value = '';
+            document.getElementById('report-content').value = '';
+
+            showModal("성공", `레포트가 성공적으로 저장되었습니다. (직원들과 공유됩니다)`);
+            // 나의 레포트 탭으로 자동 이동
+            switchTab('my-reports'); 
+        } catch (error) {
+            console.error("레포트 저장 실패:", error);
+            showError("레포트 저장 중 오류가 발생했습니다: " + error.message);
+        }
+    });
+
+    // 탭 버튼 클릭 리스너
+    tabButtons.forEach(button => {
+        button.addEventListener('click', (e) => {
+            switchTab(e.currentTarget.dataset.tab);
+        });
+    });
+
+    // 모달 관리 함수
+    function showModal(title, message) {
+        modalTitle.textContent = title;
+        // 메시지에 줄바꿈 문자 처리
+        modalMessage.innerHTML = message.replace(/\n/g, '<br>'); 
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+    }
+
+    modalCloseButton.addEventListener('click', () => {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    });
+
+    function showError(message) {
+        showModal("오류 발생", message);
+    }
+
+    // 초기화
+    window.onload = initializeFirebase;
+    switchTab('register'); // 초기 탭 설정
+
+</script>
+</body>
+</html>
